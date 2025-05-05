@@ -1,0 +1,69 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import urllib.parse
+
+st.set_page_config(page_title="URL Generator & Keyword Dashboard", layout="wide")
+st.title("System1 URL Generator & Keyword Dashboard")
+
+# --- URL Generator Section ---
+st.header("URL Generator")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    live_url = st.text_input("Live URL", "")
+    headline = st.text_input("Headline (optional)", "")
+    segment = st.text_input("Segment (optional)", "")
+    force_keys = [st.text_input(f"Force Key {chr(65+i)}", "", key=f"forceKey{i}") for i in range(6)]
+
+with col2:
+    st.markdown("#### How to use:")
+    st.markdown("""
+    - Enter the live URL and (optionally) a headline and segment.
+    - Fill in up to 6 force keys (A-F). Spaces will be replaced with plus signs.
+    - Click **Generate URL** to get your campaign URL.
+    """)
+    
+    if st.button("Generate URL"):
+        # Build parameters
+        params = []
+        for i, key in enumerate(force_keys):
+            if key.strip():
+                params.append(f"forceKey{chr(65+i)}={key.strip().replace(' ', '+')}")
+        if segment.strip():
+            params.append(f"segment={segment.strip().replace(' ', '+')}")
+        if headline.strip():
+            params.append(f"headline={headline.strip().replace(' ', '+')}")
+        # Tracking params
+        article_name = ''
+        if live_url:
+            try:
+                path = live_url.split('/')
+                article = next((p for p in path if 'en-us' in p), '').split('-en-us')[0]
+                article_name = ' '.join(word.capitalize() for word in article.split('-')) if article else ''
+            except Exception:
+                article_name = ''
+        tracking_params = {
+            's1paid': '{account.id}',
+            's1placement': '{placement}',
+            's1padid': '{ad.id}',
+            's1particle': article_name.replace(' ', '+') if article_name else '',
+            's1pcid': '{campaign.id}'
+        }
+        for k, v in tracking_params.items():
+            if v:
+                params.append(f"{k}={v}")
+        if live_url:
+            url = f"{live_url}?{'&'.join(params)}"
+            st.success(f"Generated URL:")
+            st.code(url, language="text")
+        else:
+            st.error("Please enter a Live URL.")
+
+st.markdown("---")
+
+# --- Excel Upload & Keyword Dashboard ---
+st.header("Keyword Metrics Dashboard")
+
+uploaded_file = st.file_uploader("Upload Excel file (.xlsx or .xls)",
