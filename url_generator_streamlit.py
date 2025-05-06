@@ -34,7 +34,6 @@ with col1:
     for i in range(6):
         val = st.text_input(f"Force Key {chr(65+i)}", st.session_state['force_keys'][i], key=f"forceKey{i}")
         force_keys.append(val)
-        # Keep session state in sync with manual edits
         st.session_state['force_keys'][i] = val
 
 with col2:
@@ -47,7 +46,7 @@ with col2:
     """)
     if st.button("Reset Force Keys"):
         reset_force_keys()
-        st.experimental_rerun()
+        st.rerun()
 
 # --- URL Generation Logic ---
 def build_system1_url(live_url, headline, segment, force_keys):
@@ -59,7 +58,6 @@ def build_system1_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
-    # Tracking params
     article_name = ''
     if live_url:
         try:
@@ -91,13 +89,11 @@ def build_fb_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
-    # Tracking params
     params.append('s1paid={account.id}')
     params.append('s1placement={placement}')
     params.append('s1padid={ad.id}')
     params.append('s1particle=Cheap+Dental+Implants')
     params.append('s1pcid={campaign.id}')
-    # Facebook params
     params.append('fbid={1234567890}')
     params.append('fbland={PageView}')
     params.append('fbserp={Add+To+Wishlist}')
@@ -116,7 +112,6 @@ def build_leadgen_url(live_url, headline, segment, force_keys):
     params.append(f"segment={seg}")
     params.append(f"headline={headline.strip().replace(' ', '+') if headline.strip() else 'Need+dental+implants'}")
     params.append('s1paid={account.id}')
-    # Article from headline or URL
     article = headline
     if not article and live_url:
         try:
@@ -215,11 +210,10 @@ if uploaded_file:
             if st.button(row['query'], key=f"kwbtn_{idx}"):
                 fill_next_force_key(row['query'])
                 st.rerun()
-            st.write(f"Avg Revenue: ${row['avg_revenue']} | Total Revenue: ${row['total_revenue']}")
         if len(filtered_df) > max_buttons:
             st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
         st.write("**Current Force Keys:**")
         for i, val in enumerate(st.session_state['force_keys']):
             st.write(f"Force Key {chr(65+i)}: {val}")
     except Exception as e:
-        st.error(f"Error processing file: {e}") 
+        st.error(f"Error processing file: {e}")
