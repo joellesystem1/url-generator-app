@@ -56,6 +56,15 @@ def load_and_process_excel(uploaded_file):
     metrics_df = metrics_df[~metrics_df['query'].str.lower().isin(invalid_queries)]
     return metrics_df
 
+# --- Copy to Clipboard Helper ---
+def copy_to_clipboard(text, label):
+    st.code(text, language="text")
+    copy_code = f"""
+    <input type="text" value="{text}" id="{label}" style="position: absolute; left: -1000px;">
+    <button onclick="navigator.clipboard.writeText(document.getElementById('{label}').value)">Copy</button>
+    """
+    st.markdown(copy_code, unsafe_allow_html=True)
+
 # --- URL Generator Section ---
 st.header("URL Generator")
 
@@ -63,8 +72,8 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     live_url = st.text_input("Live URL", "")
-    headline = st.text_input("Headline (optional)", "")
-    segment = st.text_input("Segment (optional)", "")
+    headline = st.text_input("Headline", "")
+    segment = st.text_input("Segment", "")
     force_keys = []
     for i in range(6):
         val = st.text_input(f"Force Key {chr(65+i)}", st.session_state['force_keys'][i], key=f"forceKey{i}")
@@ -74,7 +83,7 @@ with col1:
 with col2:
     st.markdown("#### How to use:")
     st.markdown("""
-    - Enter the live URL and (optionally) a headline and segment.
+    - Enter the live URL and a headline and segment (both required).
     - Fill in up to 6 force keys (A-F). Spaces will be replaced with plus signs.
     - Click any keyword below to fill the next force key.
     - Use the buttons below to generate different types of URLs.
@@ -166,25 +175,34 @@ sys1_url = fb_url = leadgen_url = ""
 colA, colB, colC = st.columns(3)
 with colA:
     if st.button("Generate System1 URL"):
-        sys1_url = build_system1_url(live_url, headline, segment, force_keys)
-        st.session_state['sys1_url'] = sys1_url
+        if not headline.strip() or not segment.strip():
+            st.error("Both Headline and Segment are required.")
+        else:
+            sys1_url = build_system1_url(live_url, headline, segment, force_keys)
+            st.session_state['sys1_url'] = sys1_url
     if 'sys1_url' in st.session_state and st.session_state['sys1_url']:
         st.success("System1 URL:")
-        st.code(st.session_state['sys1_url'], language="text")
+        copy_to_clipboard(st.session_state['sys1_url'], "System1_URL")
 with colB:
     if st.button("Generate Facebook URL"):
-        fb_url = build_fb_url(live_url, headline, segment, force_keys)
-        st.session_state['fb_url'] = fb_url
+        if not headline.strip() or not segment.strip():
+            st.error("Both Headline and Segment are required.")
+        else:
+            fb_url = build_fb_url(live_url, headline, segment, force_keys)
+            st.session_state['fb_url'] = fb_url
     if 'fb_url' in st.session_state and st.session_state['fb_url']:
         st.success("Facebook URL:")
-        st.code(st.session_state['fb_url'], language="text")
+        copy_to_clipboard(st.session_state['fb_url'], "Facebook_URL")
 with colC:
     if st.button("Generate Leadgen URL"):
-        leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
-        st.session_state['leadgen_url'] = leadgen_url
+        if not headline.strip() or not segment.strip():
+            st.error("Both Headline and Segment are required.")
+        else:
+            leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
+            st.session_state['leadgen_url'] = leadgen_url
     if 'leadgen_url' in st.session_state and st.session_state['leadgen_url']:
         st.success("Leadgen URL:")
-        st.code(st.session_state['leadgen_url'], language="text")
+        copy_to_clipboard(st.session_state['leadgen_url'], "Leadgen_URL")
 
 st.markdown("---")
 
@@ -208,16 +226,24 @@ if uploaded_file:
         st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
         st.subheader("Search & Click to Fill Force Keys")
         search_term = st.text_input("Search keywords...", "")
-        filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())]
-        st.dataframe(filtered_df, use_container_width=True)
-        st.write("**Click a keyword below to fill the next available force key:**")
-        max_buttons = 50
-        for idx, row in filtered_df.head(max_buttons).iterrows():
-            if st.button(row['query'], key=f"kwbtn_{idx}"):
+        filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())].reset_index(drop=True)
+        st.write("**Click a query below to fill the next available force key:**")
+        max_rows = 30
+        show_df = filtered_df.head(max_rows)
+        for idx, row in show_df.iterrows():
+            if st.button(row['query'], key=f"querybtn_{idx}"):
                 fill_next_force_key(row['query'])
                 st.rerun()
-        if len(filtered_df) > max_buttons:
-            st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
+            st.caption(
+                f"Avg Revenue: ${row['avg_revenue']} | "
+                f"Total Revenue: ${row['total_revenue']} | "
+                f"Avg RPC: ${row['avg_rpc']} | "
+                f"Total RPC: ${row['total_rpc']} | "
+                f"Avg Clicks: {row['avg_clicks']} | "
+                f"Total Clicks: {row['total_clicks']}"
+            )
+        if len(filtered_df) > max_rows:
+            st.info(f"Showing only the first {max_rows} results. Use the search box to narrow down.")
         st.write("**Current Force Keys:**")
         for i, val in enumerate(st.session_state['force_keys']):
             st.write(f"Force Key {chr(65+i)}: {val}")
