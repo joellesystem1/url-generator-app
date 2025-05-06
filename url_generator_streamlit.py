@@ -11,6 +11,8 @@ if 'force_keys' not in st.session_state:
     st.session_state['force_keys'] = ["" for _ in range(6)]
 if 'force_key_index' not in st.session_state:
     st.session_state['force_key_index'] = 0
+if 'sort_metric' not in st.session_state:
+    st.session_state['sort_metric'] = "none"
 
 def fill_next_force_key(value):
     idx = st.session_state['force_key_index']
@@ -227,9 +229,23 @@ if uploaded_file:
         st.subheader("Search & Click to Fill Force Keys")
         search_term = st.text_input("Search keywords...", "")
         filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())].reset_index(drop=True)
+
+        # --- Top Metric Buttons ---
         st.write("**Click a query below to fill the next available force key:**")
-        max_rows = 30
-        show_df = filtered_df.head(max_rows)
+        col_rpc, col_rev, col_clicks = st.columns(3)
+        if col_rpc.button("High Avg RPC"):
+            st.session_state["sort_metric"] = "avg_rpc"
+        if col_rev.button("High Avg Revenue"):
+            st.session_state["sort_metric"] = "avg_revenue"
+        if col_clicks.button("High Avg Clicks"):
+            st.session_state["sort_metric"] = "avg_clicks"
+
+        sort_metric = st.session_state.get("sort_metric", "none")
+        show_df = filtered_df.copy()
+        if sort_metric in ["avg_rpc", "avg_revenue", "avg_clicks"]:
+            show_df = show_df.sort_values(by=sort_metric, ascending=False)
+        show_df = show_df.head(30)
+
         for idx, row in show_df.iterrows():
             if st.button(row['query'], key=f"querybtn_{idx}"):
                 fill_next_force_key(row['query'])
@@ -242,8 +258,8 @@ if uploaded_file:
                 f"Avg Clicks: {row['avg_clicks']} | "
                 f"Total Clicks: {row['total_clicks']}"
             )
-        if len(filtered_df) > max_rows:
-            st.info(f"Showing only the first {max_rows} results. Use the search box to narrow down.")
+        if len(filtered_df) > 30:
+            st.info(f"Showing only the first 30 results. Use the search box to narrow down.")
         st.write("**Current Force Keys:**")
         for i, val in enumerate(st.session_state['force_keys']):
             st.write(f"Force Key {chr(65+i)}: {val}")
