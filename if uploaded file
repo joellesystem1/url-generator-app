@@ -1,0 +1,15 @@
+   st.subheader("Search & Click to Fill Force Keys")
+   search_term = st.text_input("Search keywords...", "")
+   filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())]
+   st.dataframe(filtered_df, use_container_width=True)
+   st.write("**Click a keyword below to fill the next available force key:**")
+   max_buttons = 50
+   for idx, row in filtered_df.head(max_buttons).iterrows():
+       if st.button(row['query'], key=f"kwbtn_{idx}"):
+           fill_next_force_key(row['query'])
+           st.rerun()
+   if len(filtered_df) > max_buttons:
+       st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
+   st.write("**Current Force Keys:**")
+   for i, val in enumerate(st.session_state['force_keys']):
+       st.write(f"Force Key {chr(65+i)}: {val}")
