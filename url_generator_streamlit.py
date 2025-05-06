@@ -34,6 +34,7 @@ with col1:
     for i in range(6):
         val = st.text_input(f"Force Key {chr(65+i)}", st.session_state['force_keys'][i], key=f"forceKey{i}")
         force_keys.append(val)
+        # Keep session state in sync with manual edits
         st.session_state['force_keys'][i] = val
 
 with col2:
@@ -46,7 +47,7 @@ with col2:
     """)
     if st.button("Reset Force Keys"):
         reset_force_keys()
-        st.rerun()
+        st.experimental_rerun()
 
 # --- URL Generation Logic ---
 def build_system1_url(live_url, headline, segment, force_keys):
@@ -58,6 +59,7 @@ def build_system1_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
+    # Tracking params
     article_name = ''
     if live_url:
         try:
@@ -89,11 +91,13 @@ def build_fb_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
+    # Tracking params
     params.append('s1paid={account.id}')
     params.append('s1placement={placement}')
     params.append('s1padid={ad.id}')
     params.append('s1particle=Cheap+Dental+Implants')
     params.append('s1pcid={campaign.id}')
+    # Facebook params
     params.append('fbid={1234567890}')
     params.append('fbland={PageView}')
     params.append('fbserp={Add+To+Wishlist}')
@@ -112,6 +116,7 @@ def build_leadgen_url(live_url, headline, segment, force_keys):
     params.append(f"segment={seg}")
     params.append(f"headline={headline.strip().replace(' ', '+') if headline.strip() else 'Need+dental+implants'}")
     params.append('s1paid={account.id}')
+    # Article from headline or URL
     article = headline
     if not article and live_url:
         try:
@@ -160,7 +165,8 @@ uploaded_file = st.file_uploader("Upload Excel file (.xlsx or .xls)", type=["xls
 
 if uploaded_file:
     try:
-        df = pd.read_excel(uploaded_file, engine='openpyxl', skiprows=[0], dtype=str)
+        # FAST: Let pandas infer types and engine
+        df = pd.read_excel(uploaded_file, skiprows=[0])
         st.success(f"File uploaded! {df.shape[0]} rows loaded.")
         revenue_cols = df.columns[1:8]
         rpc_cols = df.columns[8:15]
@@ -182,38 +188,4 @@ if uploaded_file:
         queries = df.iloc[:, 0].fillna('').astype(str).str.strip()
         metrics_df = pd.DataFrame({
             'query': queries,
-            'avg_revenue': revenue_data.mean(axis=1).round(2),
-            'total_revenue': revenue_data.sum(axis=1).round(2),
-            'avg_rpc': rpc_data.mean(axis=1).round(2),
-            'total_rpc': rpc_data.sum(axis=1).round(2),
-            'avg_clicks': clicks_data.mean(axis=1).round(0),
-            'total_clicks': clicks_data.sum(axis=1).round(0)
-        })
-        invalid_queries = ['query', 'total', 'grand total', 'nan', '#n/a', '', ' ']
-        metrics_df = metrics_df[~metrics_df['query'].str.lower().isin(invalid_queries)]
-        st.subheader("Overall Stats")
-        total_rev = float(metrics_df['total_revenue'].sum())
-        total_clk = float(metrics_df['total_clicks'].sum())
-        total_rpc = float(metrics_df['total_rpc'].sum())
-        avg_rpc_val = total_rev / total_clk if total_clk > 0 else 0
-        st.write(f"**Total Revenue:** ${total_rev:,.2f}")
-        st.write(f"**Total Clicks:** {int(total_clk):,}")
-        st.write(f"**Total RPC:** ${total_rpc:,.2f}")
-        st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
-        st.subheader("Search & Click to Fill Force Keys")
-        search_term = st.text_input("Search keywords...", "")
-        filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())]
-        st.dataframe(filtered_df, use_container_width=True)
-        st.write("**Click a keyword below to fill the next available force key:**")
-        max_buttons = 50
-        for idx, row in filtered_df.head(max_buttons).iterrows():
-            if st.button(row['query'], key=f"kwbtn_{idx}"):
-                fill_next_force_key(row['query'])
-                st.rerun()
-        if len(filtered_df) > max_buttons:
-            st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
-        st.write("**Current Force Keys:**")
-        for i, val in enumerate(st.session_state['force_keys']):
-            st.write(f"Force Key {chr(65+i)}: {val}")
-    except Exception as e:
-        st.error(f"Error processing file: {e}")
+            'avg_revenue': revenue_data.mean
