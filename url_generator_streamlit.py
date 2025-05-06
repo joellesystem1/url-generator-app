@@ -215,13 +215,7 @@ if uploaded_file:
             if st.button(row['query'], key=f"kwbtn_{idx}"):
                 fill_next_force_key(row['query'])
                 st.rerun()
-            st.markdown(
-                f"<div style='font-weight:bold; font-size:1.1em;'>"
-                f"Avg Revenue: ${row['avg_revenue']} &nbsp; | &nbsp; "
-                f"Total Revenue: ${row['total_revenue']}"
-                f"</div>",
-                unsafe_allow_html=True
-            )
+            st.write(f"Avg Revenue: ${row['avg_revenue']} | Total Revenue: ${row['total_revenue']}")
         if len(filtered_df) > max_buttons:
             st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
         st.write("**Current Force Keys:**")
