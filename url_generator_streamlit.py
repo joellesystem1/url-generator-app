@@ -218,9 +218,7 @@ if uploaded_file:
             st.markdown(
                 f"<div style='font-weight:bold; font-size:1.1em;'>"
                 f"Avg Revenue: ${row['avg_revenue']} &nbsp; | &nbsp; "
-                f"Total Revenue: ${row['total_revenue']} &nbsp; | &nbsp; "
-                f"Avg RPC: ${row['avg_rpc']} &nbsp; | &nbsp; "
-                f"Total Clicks: {row['total_clicks']}"
+                f"Total Revenue: ${row['total_revenue']}"
                 f"</div>",
                 unsafe_allow_html=True
             )
