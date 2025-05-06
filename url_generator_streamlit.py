@@ -11,8 +11,6 @@ if 'force_keys' not in st.session_state:
     st.session_state['force_keys'] = ["" for _ in range(6)]
 if 'force_key_index' not in st.session_state:
     st.session_state['force_key_index'] = 0
-if 'sort_metric' not in st.session_state:
-    st.session_state['sort_metric'] = "none"
 
 def fill_next_force_key(value):
     idx = st.session_state['force_key_index']
@@ -23,50 +21,6 @@ def reset_force_keys():
     st.session_state['force_keys'] = ["" for _ in range(6)]
     st.session_state['force_key_index'] = 0
 
-# --- Caching for Excel Processing ---
-@st.cache_data
-def load_and_process_excel(uploaded_file):
-    df = pd.read_excel(uploaded_file, engine='openpyxl', skiprows=[0], dtype=str)
-    revenue_cols = df.columns[1:8]
-    rpc_cols = df.columns[8:15]
-    clicks_cols = df.columns[15:22]
-    def clean_numeric(df, cols):
-        data = df[cols].copy().astype(str)
-        data = data.replace({
-            r'[\$,]': '',
-            r'^\s*$': '0',
-            'nan': '0',
-            '#N/A': '0',
-            'None': '0',
-            '-': '0'
-        }, regex=True)
-        return data.apply(pd.to_numeric, errors='coerce').fillna(0)
-    revenue_data = clean_numeric(df, revenue_cols)
-    rpc_data = clean_numeric(df, rpc_cols)
-    clicks_data = clean_numeric(df, clicks_cols)
-    queries = df.iloc[:, 0].fillna('').astype(str).str.strip()
-    metrics_df = pd.DataFrame({
-        'query': queries,
-        'avg_revenue': revenue_data.mean(axis=1).round(2),
-        'total_revenue': revenue_data.sum(axis=1).round(2),
-        'avg_rpc': rpc_data.mean(axis=1).round(2),
-        'total_rpc': rpc_data.sum(axis=1).round(2),
-        'avg_clicks': clicks_data.mean(axis=1).round(0),
-        'total_clicks': clicks_data.sum(axis=1).round(0)
-    })
-    invalid_queries = ['query', 'total', 'grand total', 'nan', '#n/a', '', ' ']
-    metrics_df = metrics_df[~metrics_df['query'].str.lower().isin(invalid_queries)]
-    return metrics_df
-
-# --- Copy to Clipboard Helper ---
-def copy_to_clipboard(text, label):
-    st.code(text, language="text")
-    copy_code = f"""
-    <input type="text" value="{text}" id="{label}" style="position: absolute; left: -1000px;">
-    <button onclick="navigator.clipboard.writeText(document.getElementById('{label}').value)">Copy</button>
-    """
-    st.markdown(copy_code, unsafe_allow_html=True)
-
 # --- URL Generator Section ---
 st.header("URL Generator")
 
@@ -74,25 +28,26 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     live_url = st.text_input("Live URL", "")
-    headline = st.text_input("Headline", "")
-    segment = st.text_input("Segment", "")
+    headline = st.text_input("Headline (optional)", "")
+    segment = st.text_input("Segment (optional)", "")
     force_keys = []
     for i in range(6):
         val = st.text_input(f"Force Key {chr(65+i)}", st.session_state['force_keys'][i], key=f"forceKey{i}")
         force_keys.append(val)
+        # Keep session state in sync with manual edits
         st.session_state['force_keys'][i] = val
 
 with col2:
     st.markdown("#### How to use:")
     st.markdown("""
-    - Enter the live URL and a headline and segment (both required).
+    - Enter the live URL and (optionally) a headline and segment.
     - Fill in up to 6 force keys (A-F). Spaces will be replaced with plus signs.
     - Click any keyword below to fill the next force key.
     - Use the buttons below to generate different types of URLs.
     """)
     if st.button("Reset Force Keys"):
         reset_force_keys()
-        st.rerun()
+        st.experimental_rerun()
 
 # --- URL Generation Logic ---
 def build_system1_url(live_url, headline, segment, force_keys):
@@ -104,6 +59,7 @@ def build_system1_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
+    # Tracking params
     article_name = ''
     if live_url:
         try:
@@ -135,11 +91,13 @@ def build_fb_url(live_url, headline, segment, force_keys):
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
         params.append(f"headline={headline.strip().replace(' ', '+')}")
+    # Tracking params
     params.append('s1paid={account.id}')
     params.append('s1placement={placement}')
     params.append('s1padid={ad.id}')
     params.append('s1particle=Cheap+Dental+Implants')
     params.append('s1pcid={campaign.id}')
+    # Facebook params
     params.append('fbid={1234567890}')
     params.append('fbland={PageView}')
     params.append('fbserp={Add+To+Wishlist}')
@@ -158,6 +116,7 @@ def build_leadgen_url(live_url, headline, segment, force_keys):
     params.append(f"segment={seg}")
     params.append(f"headline={headline.strip().replace(' ', '+') if headline.strip() else 'Need+dental+implants'}")
     params.append('s1paid={account.id}')
+    # Article from headline or URL
     article = headline
     if not article and live_url:
         try:
@@ -177,34 +136,25 @@ sys1_url = fb_url = leadgen_url = ""
 colA, colB, colC = st.columns(3)
 with colA:
     if st.button("Generate System1 URL"):
-        if not headline.strip() or not segment.strip():
-            st.error("Both Headline and Segment are required.")
-        else:
-            sys1_url = build_system1_url(live_url, headline, segment, force_keys)
-            st.session_state['sys1_url'] = sys1_url
+        sys1_url = build_system1_url(live_url, headline, segment, force_keys)
+        st.session_state['sys1_url'] = sys1_url
     if 'sys1_url' in st.session_state and st.session_state['sys1_url']:
         st.success("System1 URL:")
-        copy_to_clipboard(st.session_state['sys1_url'], "System1_URL")
+        st.code(st.session_state['sys1_url'], language="text")
 with colB:
     if st.button("Generate Facebook URL"):
-        if not headline.strip() or not segment.strip():
-            st.error("Both Headline and Segment are required.")
-        else:
-            fb_url = build_fb_url(live_url, headline, segment, force_keys)
-            st.session_state['fb_url'] = fb_url
+        fb_url = build_fb_url(live_url, headline, segment, force_keys)
+        st.session_state['fb_url'] = fb_url
     if 'fb_url' in st.session_state and st.session_state['fb_url']:
         st.success("Facebook URL:")
-        copy_to_clipboard(st.session_state['fb_url'], "Facebook_URL")
+        st.code(st.session_state['fb_url'], language="text")
 with colC:
     if st.button("Generate Leadgen URL"):
-        if not headline.strip() or not segment.strip():
-            st.error("Both Headline and Segment are required.")
-        else:
-            leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
-            st.session_state['leadgen_url'] = leadgen_url
+        leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
+        st.session_state['leadgen_url'] = leadgen_url
     if 'leadgen_url' in st.session_state and st.session_state['leadgen_url']:
         st.success("Leadgen URL:")
-        copy_to_clipboard(st.session_state['leadgen_url'], "Leadgen_URL")
+        st.code(st.session_state['leadgen_url'], language="text")
 
 st.markdown("---")
 
@@ -215,8 +165,37 @@ uploaded_file = st.file_uploader("Upload Excel file (.xlsx or .xls)", type=["xls
 
 if uploaded_file:
     try:
-        metrics_df = load_and_process_excel(uploaded_file)
-        st.success(f"File uploaded! {metrics_df.shape[0]} rows loaded.")
+        df = pd.read_excel(uploaded_file, engine='openpyxl', skiprows=[0], dtype=str)
+        st.success(f"File uploaded! {df.shape[0]} rows loaded.")
+        revenue_cols = df.columns[1:8]
+        rpc_cols = df.columns[8:15]
+        clicks_cols = df.columns[15:22]
+        def clean_numeric(df, cols):
+            data = df[cols].copy().astype(str)
+            data = data.replace({
+                r'[\$,]': '',
+                r'^\s*$': '0',
+                'nan': '0',
+                '#N/A': '0',
+                'None': '0',
+                '-': '0'
+            }, regex=True)
+            return data.apply(pd.to_numeric, errors='coerce').fillna(0)
+        revenue_data = clean_numeric(df, revenue_cols)
+        rpc_data = clean_numeric(df, rpc_cols)
+        clicks_data = clean_numeric(df, clicks_cols)
+        queries = df.iloc[:, 0].fillna('').astype(str).str.strip()
+        metrics_df = pd.DataFrame({
+            'query': queries,
+            'avg_revenue': revenue_data.mean(axis=1).round(2),
+            'total_revenue': revenue_data.sum(axis=1).round(2),
+            'avg_rpc': rpc_data.mean(axis=1).round(2),
+            'total_rpc': rpc_data.sum(axis=1).round(2),
+            'avg_clicks': clicks_data.mean(axis=1).round(0),
+            'total_clicks': clicks_data.sum(axis=1).round(0)
+        })
+        invalid_queries = ['query', 'total', 'grand total', 'nan', '#n/a', '', ' ']
+        metrics_df = metrics_df[~metrics_df['query'].str.lower().isin(invalid_queries)]
         st.subheader("Overall Stats")
         total_rev = float(metrics_df['total_revenue'].sum())
         total_clk = float(metrics_df['total_clicks'].sum())
@@ -228,40 +207,27 @@ if uploaded_file:
         st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
         st.subheader("Search & Click to Fill Force Keys")
         search_term = st.text_input("Search keywords...", "")
-        filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())].reset_index(drop=True)
-
-        # --- Top Metric Buttons ---
-        st.write("**Click a query below to fill the next available force key:**")
-        col_rpc, col_rev, col_clicks = st.columns(3)
-        if col_rpc.button("High Avg RPC"):
-            st.session_state["sort_metric"] = "avg_rpc"
-        if col_rev.button("High Avg Revenue"):
-            st.session_state["sort_metric"] = "avg_revenue"
-        if col_clicks.button("High Avg Clicks"):
-            st.session_state["sort_metric"] = "avg_clicks"
-
-        sort_metric = st.session_state.get("sort_metric", "none")
-        show_df = filtered_df.copy()
-        if sort_metric in ["avg_rpc", "avg_revenue", "avg_clicks"]:
-            show_df = show_df.sort_values(by=sort_metric, ascending=False)
-        show_df = show_df.head(30)
-
-        for idx, row in show_df.iterrows():
-            if st.button(row['query'], key=f"querybtn_{idx}"):
+        filtered_df = metrics_df[metrics_df['query'].str.lower().str.contains(search_term.lower())]
+        st.dataframe(filtered_df, use_container_width=True)
+        st.write("**Click a keyword below to fill the next available force key:**")
+        max_buttons = 50
+        for idx, row in filtered_df.head(max_buttons).iterrows():
+            if st.button(row['query'], key=f"kwbtn_{idx}"):
                 fill_next_force_key(row['query'])
                 st.rerun()
-            st.caption(
-                f"Avg Revenue: ${row['avg_revenue']} | "
-                f"Total Revenue: ${row['total_revenue']} | "
-                f"Avg RPC: ${row['avg_rpc']} | "
-                f"Total RPC: ${row['total_rpc']} | "
-                f"Avg Clicks: {row['avg_clicks']} | "
+            st.markdown(
+                f"<div style='font-weight:bold; font-size:1.1em;'>"
+                f"Avg Revenue: ${row['avg_revenue']} &nbsp; | &nbsp; "
+                f"Total Revenue: ${row['total_revenue']} &nbsp; | &nbsp; "
+                f"Avg RPC: ${row['avg_rpc']} &nbsp; | &nbsp; "
                 f"Total Clicks: {row['total_clicks']}"
+                f"</div>",
+                unsafe_allow_html=True
             )
-        if len(filtered_df) > 30:
-            st.info(f"Showing only the first 30 results. Use the search box to narrow down.")
+        if len(filtered_df) > max_buttons:
+            st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
         st.write("**Current Force Keys:**")
         for i, val in enumerate(st.session_state['force_keys']):
             st.write(f"Force Key {chr(65+i)}: {val}")
     except Exception as e:
-        st.error(f"Error processing file: {e}")
+        st.error(f"Error processing file: {e}") 
