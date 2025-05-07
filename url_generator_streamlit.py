@@ -195,4 +195,29 @@ if uploaded_file:
 
     # --- Add Keyword to Force Key ---
     st.subheader("Search and Add Keyword to Force Key")
-    keyword_search = st.text_input("Type a keyword to add
+    keyword_search = st.text_input("Type a keyword to add to the next force key")
+    if st.button("Add to Force Key"):
+        if keyword_search:
+            match = metrics_df[metrics_df['query'].str.lower().str.contains(keyword_search.lower())]
+            if not match.empty:
+                fill_next_force_key(match.iloc[0]['query'])
+                st.success(f"Added '{match.iloc[0]['query']}' to the next force key!")
+            else:
+                st.warning("No matching keyword found.")
+        else:
+            st.warning("Please enter a keyword to search.")
+
+    st.subheader("Keyword Metrics Table (use the search/filter box at the top right of the table!)")
+    st.dataframe(metrics_df, use_container_width=True)
+
+    st.subheader("Overall Stats")
+    total_rev = float(metrics_df['total_revenue'].sum())
+    total_clk = float(metrics_df['total_clicks'].sum())
+    total_rpc = float(metrics_df['total_rpc'].sum())
+    avg_rpc_val = total_rev / total_clk if total_clk > 0 else 0
+    st.write(f"**Total Revenue:** ${total_rev:,.2f}")
+    st.write(f"**Total Clicks:** {int(total_clk):,}")
+    st.write(f"**Total RPC:** ${total_rpc:,.2f}")
+    st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
+else:
+    st.info("Upload an Excel file to get started.")
