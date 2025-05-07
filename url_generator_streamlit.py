@@ -40,6 +40,7 @@ with col2:
     st.markdown("""
     - Enter the live URL and (optionally) a headline and segment.
     - Fill in up to 6 force keys (A-F). Spaces will be replaced with plus signs.
+    - Use the search below to add a keyword to the next force key.
     - Use the buttons below to generate different types of URLs.
     """)
     if st.button("Reset Force Keys"):
@@ -155,6 +156,7 @@ st.header("Keyword Metrics Dashboard")
 
 uploaded_file = st.file_uploader("Upload Excel file (.xlsx or .xls)", type=["xlsx", "xls"])
 
+metrics_df = None
 if uploaded_file:
     df = pd.read_excel(uploaded_file, skiprows=[0])
     revenue_cols = df.columns[1:8]
@@ -191,17 +193,6 @@ if uploaded_file:
 
     st.success(f"File uploaded! {metrics_df.shape[0]} rows loaded.")
 
-    st.subheader("Keyword Metrics Table (use the search/filter box at the top right of the table!)")
-    st.dataframe(metrics_df, use_container_width=True)
-
-    st.subheader("Overall Stats")
-    total_rev = float(metrics_df['total_revenue'].sum())
-    total_clk = float(metrics_df['total_clicks'].sum())
-    total_rpc = float(metrics_df['total_rpc'].sum())
-    avg_rpc_val = total_rev / total_clk if total_clk > 0 else 0
-    st.write(f"**Total Revenue:** ${total_rev:,.2f}")
-    st.write(f"**Total Clicks:** {int(total_clk):,}")
-    st.write(f"**Total RPC:** ${total_rpc:,.2f}")
-    st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
-else:
-    st.info("Upload an Excel file to get started.")
+    # --- Add Keyword to Force Key ---
+    st.subheader("Search and Add Keyword to Force Key")
+    keyword_search = st.text_input("Type a keyword to add
