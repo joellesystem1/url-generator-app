@@ -1,82 +1,195 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import urllib.parse
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System1 URL Generator & Keyword Dashboard</title>
+    <style>
+        body { background: #181a1b; color: #fff; font-family: Arial, sans-serif; }
+        .container { max-width: 1200px; margin: 40px auto; }
+        input, button { font-size: 1em; }
+        #keywordsTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #keywordsTable th, #keywordsTable td { border: 1px solid #333; padding: 8px; }
+        #keywordsTable th { background: #222; }
+        #searchInput { width: 300px; margin: 20px 0; }
+        .force-key { width: 200px; margin-right: 10px; }
+        .keyword-btn { cursor: pointer; color: #4caf50; text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>System1 URL Generator & Keyword Dashboard</h1>
+    <h2>URL Builder</h2>
+    <div>
+        <input id="liveUrl" placeholder="Live URL" style="width: 400px;">
+        <input id="headline" placeholder="Headline (optional)" style="width: 250px;">
+        <input id="segment" placeholder="Segment (optional)" style="width: 200px;">
+    </div>
+    <div style="margin-top:10px;">
+        <input class="force-key" id="forceKeyA" placeholder="Force Key A">
+        <input class="force-key" id="forceKeyB" placeholder="Force Key B">
+        <input class="force-key" id="forceKeyC" placeholder="Force Key C">
+        <input class="force-key" id="forceKeyD" placeholder="Force Key D">
+        <input class="force-key" id="forceKeyE" placeholder="Force Key E">
+        <input class="force-key" id="forceKeyF" placeholder="Force Key F">
+        <button onclick="resetForceKeys()">Reset Force Keys</button>
+    </div>
+    <div style="margin-top:10px;">
+        <button onclick="generateUrl()">Generate System1 URL</button>
+        <button onclick="generateFbUrl()">Generate Facebook URL</button>
+        <button onclick="generateLeadgenUrl()">Generate Leadgen URL</button>
+    </div>
+    <div style="margin-top:10px;">
+        <textarea id="generatedUrl" rows="2" style="width: 100%;"></textarea>
+    </div>
+    <hr>
+    <h2>Keyword Metrics Dashboard</h2>
+    <form id="uploadForm">
+        <input type="file" id="excelFile" accept=".xlsx,.xls" required>
+        <button type="submit">Upload Excel</button>
+    </form>
+    <input type="text" id="searchInput" placeholder="Search keywords...">
+    <table id="keywordsTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>Query</th>
+                <th>Avg Revenue</th>
+                <th>Total Revenue</th>
+                <th>Avg RPC</th>
+                <th>Total Clicks</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="status"></div>
+</div>
+<script>
+let allKeywords = [];
+let forceKeyIndex = 0;
 
-st.set_page_config(page_title="System1 URL Generator & Keyword Dashboard", layout="wide")
-st.title("System1 URL Generator & Keyword Dashboard")
-
-# --- Session State for Force Keys ---
-if 'force_keys' not in st.session_state:
-    st.session_state['force_keys'] = ["" for _ in range(6)]
-if 'force_key_index' not in st.session_state:
-    st.session_state['force_key_index'] = 0
-
-def fill_next_force_key(value):
-    idx = st.session_state['force_key_index']
-    st.session_state['force_keys'][idx] = value.replace(' ', '+')
-    st.session_state['force_key_index'] = (idx + 1) % 6
-
-def reset_force_keys():
-    st.session_state['force_keys'] = ["" for _ in range(6)]
-    st.session_state['force_key_index'] = 0
-
-# --- URL Generator Section ---
-st.header("URL Generator")
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    live_url = st.text_input("Live URL", "")
-    headline = st.text_input("Headline (optional)", "")
-    segment = st.text_input("Segment (optional)", "")
-    force_keys = []
-    for i in range(6):
-        val = st.text_input(f"Force Key {chr(65+i)}", st.session_state['force_keys'][i], key=f"forceKey{i}")
-        force_keys.append(val)
-        # Keep session state in sync with manual edits
-        st.session_state['force_keys'][i] = val
-
-with col2:
-    st.markdown("#### How to use:")
-    st.markdown("""
-    - Enter the live URL and (optionally) a headline and segment.
-    - Fill in up to 6 force keys (A-F). Spaces will be replaced with plus signs.
-    - Click any keyword below to fill the next force key.
-    - Use the buttons below to generate different types of URLs.
-    """)
-    if st.button("Reset Force Keys"):
-        reset_force_keys()
-        st.experimental_rerun()
-
-# --- URL Generation Logic ---
-def build_system1_url(live_url, headline, segment, force_keys):
-    params = []
-    for i, key in enumerate(force_keys):
-        if key.strip():
-            params.append(f"forceKey{chr(65+i)}={key.strip().replace(' ', '+')}")
-    if segment.strip():
-        params.append(f"segment={segment.strip().replace(' ', '+')}")
-    if headline.strip():
-        params.append(f"headline={headline.strip().replace(' ', '+')}")
-    # Tracking params
-    article_name = ''
-    if live_url:
-        try:
-            path = live_url.split('/')
-            article = next((p for p in path if 'en-us' in p), '').split('-en-us')[0]
-            article_name = ' '.join(word.capitalize() for word in article.split('-')) if article else ''
-        except Exception:
-            article_name = ''
-    tracking_params = {
-        's1paid': '{account.id}',
-        's1placement': '{placement}',
-        's1padid': '{ad.id}',
-        's1particle': article_name.replace(' ', '+') if article_name else '',
-        's1pcid': '{campaign.id}'
+document.getElementById('uploadForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('excelFile');
+    const file = fileInput.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    document.getElementById('status').textContent = 'Uploading...';
+    const res = await fetch('/upload_excel', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) {
+        document.getElementById('status').textContent = 'Error: ' + data.error;
+        return;
     }
-    for k, v in tracking_params.items():
-        if v:
-            params.append(f"{k}={v}")
-    if live_url:
-        return f"{live_url}?{'&'.join
+    allKeywords = data.keywords;
+    document.getElementById('status').textContent = `Loaded ${allKeywords.length} keywords.`;
+    document.getElementById('keywordsTable').style.display = '';
+    renderTable(allKeywords);
+};
+
+document.getElementById('searchInput').oninput = function() {
+    const term = this.value.toLowerCase();
+    const filtered = allKeywords.filter(k => k.query && k.query.toLowerCase().includes(term));
+    renderTable(filtered);
+};
+
+function renderTable(keywords) {
+    const tbody = document.querySelector('#keywordsTable tbody');
+    tbody.innerHTML = '';
+    for (const k of keywords) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="keyword-btn" onclick="addToForceKey('${k.query.replace(/'/g, "\\'")}')">${k.query}</span></td>
+            <td>${k.avg_revenue}</td>
+            <td>${k.total_revenue}</td>
+            <td>${k.avg_rpc}</td>
+            <td>${k.total_clicks}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
+
+window.addToForceKey = function(keyword) {
+    const forceKeys = ['forceKeyA','forceKeyB','forceKeyC','forceKeyD','forceKeyE','forceKeyF'];
+    for (let i = 0; i < forceKeys.length; i++) {
+        const input = document.getElementById(forceKeys[i]);
+        if (input.value === "") {
+            input.value = keyword.replace(/ /g, '+');
+            forceKeyIndex = (i + 1) % 6;
+            break;
+        }
+    }
+};
+
+function resetForceKeys() {
+    ['forceKeyA','forceKeyB','forceKeyC','forceKeyD','forceKeyE','forceKeyF'].forEach(id => {
+        document.getElementById(id).value = "";
+    });
+    forceKeyIndex = 0;
+}
+
+function getForceKeys() {
+    return ['A','B','C','D','E','F'].map(k => document.getElementById('forceKey'+k).value);
+}
+
+function generateUrl() {
+    const liveUrl = document.getElementById('liveUrl').value;
+    const headline = document.getElementById('headline').value;
+    const segment = document.getElementById('segment').value;
+    const forceKeys = getForceKeys();
+    let params = [];
+    forceKeys.forEach((key, i) => {
+        if (key) params.push(`forceKey${String.fromCharCode(65+i)}=${key}`);
+    });
+    if (segment) params.push(`segment=${segment}`);
+    if (headline) params.push(`headline=${headline}`);
+    // Tracking params
+    params.push('s1paid={account.id}');
+    params.push('s1placement={placement}');
+    params.push('s1padid={ad.id}');
+    params.push('s1particle=Cheap+Dental+Implants');
+    params.push('s1pcid={campaign.id}');
+    document.getElementById('generatedUrl').value = liveUrl ? `${liveUrl}?${params.join('&')}` : '';
+}
+
+function generateFbUrl() {
+    const liveUrl = document.getElementById('liveUrl').value;
+    const headline = document.getElementById('headline').value;
+    const segment = document.getElementById('segment').value;
+    const forceKeys = getForceKeys();
+    let params = [];
+    forceKeys.forEach((key, i) => {
+        if (key) params.push(`forceKey${String.fromCharCode(65+i)}=${key}`);
+    });
+    if (segment) params.push(`segment=${segment}`);
+    if (headline) params.push(`headline=${headline}`);
+    params.push('s1paid={account.id}');
+    params.push('s1placement={placement}');
+    params.push('s1padid={ad.id}');
+    params.push('s1particle=Cheap+Dental+Implants');
+    params.push('s1pcid={campaign.id}');
+    params.push('fbid={1234567890}');
+    params.push('fbland={PageView}');
+    params.push('fbserp={Add+To+Wishlist}');
+    params.push('fbclick={Purchase}');
+    params.push('fbclid={click_id}');
+    document.getElementById('generatedUrl').value = liveUrl ? `${liveUrl}?${params.join('&')}` : '';
+}
+
+function generateLeadgenUrl() {
+    const liveUrl = document.getElementById('liveUrl').value;
+    const headline = document.getElementById('headline').value;
+    const segment = document.getElementById('segment').value || 'rsoc.dp.topictracking.001';
+    const forceKeys = getForceKeys();
+    let params = [];
+    forceKeys.forEach((key, i) => {
+        if (key) params.push(`forceKey${String.fromCharCode(65+i)}=${key}`);
+    });
+    params.push(`segment=${segment}`);
+    params.push(`headline=${headline ? headline : 'Need+dental+implants'}`);
+    params.push('s1paid={account.id}');
+    params.push('s1particle=Cheap+Dental+Implants');
+    params.push('s1pcid={campaign.id}');
+    document.getElementById('generatedUrl').value = liveUrl ? `${liveUrl}?${params.join('&')}` : '';
+}
+</script>
+</body>
+</html>
