@@ -207,7 +207,7 @@ if uploaded_file:
     st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
 else:
     st.info("Upload an Excel file to get started.")
-# --- Keyword Search & Click-to-Add Section ---
+# ---- Keyword Search & Click-to-Add Section ----
 
 # Example: Replace this with your real keyword list or load from file
 all_keywords = [
@@ -221,14 +221,7 @@ filtered_keywords = [k for k in all_keywords if search_term.lower() in k.lower()
 
 st.write("Click a keyword to add it to the next available Force Key:")
 
-for keyword in filtered_keywords:
-    if st.button(keyword, key=f"kwbtn_{keyword}"):
-        fill_next_force_key(keyword)
-        st.experimental_rerun()  # Refresh to show updated force keys
-        # --- Clickable Keyword List to Fill Force Keys ---
-
-# Let's assume 'filtered_keywords' is your list of keywords to display
-for keyword in filtered_keywords:
-    if st.button(keyword, key=f"kwbtn_{keyword}"):
+for i, keyword in enumerate(filtered_keywords):
+    if st.button(keyword, key=f"kwbtn_{i}_{keyword}"):
         fill_next_force_key(keyword)
         st.experimental_rerun()  # Refresh to show updated force keys
