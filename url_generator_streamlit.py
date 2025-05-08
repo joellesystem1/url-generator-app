@@ -207,21 +207,29 @@ if uploaded_file:
     st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
 else:
     st.info("Upload an Excel file to get started.")
-# ---- Keyword Search & Click-to-Add Section ----
+# --- Interactive Keyword Picker Table (AgGrid) ---
 
-# Example: Replace this with your real keyword list or load from file
-all_keywords = [
-    "Bathroom Grants", "Smallest Camper Van with Bathroom", "Find Bathroom Remodel Paid by Grants",
-    "Cheap Dental Implants", "Best Home Insurance", "Affordable Car Insurance"
-]
+st.subheader("Pick a keyword to add to Force Keys (search/filter above the table!)")
 
-search_term = st.text_input("Search keywords to add to Force Keys...")
+# metrics_df should already be created from your Excel upload and look like:
+# columns: ['query', 'avg_revenue', 'total_revenue', 'avg_rpc', 'total_rpc', 'avg_clicks', 'total_clicks']
 
-filtered_keywords = [k for k in all_keywords if search_term.lower() in k.lower()]
+gb = GridOptionsBuilder.from_dataframe(metrics_df)
+gb.configure_selection('single', use_checkbox=True)  # single row selection with checkbox
+grid_options = gb.build()
 
-st.write("Click a keyword to add it to the next available Force Key:")
+grid_response = AgGrid(
+    metrics_df,
+    gridOptions=grid_options,
+    update_mode='SELECTION_CHANGED',
+    height=400,
+    width='100%',
+    fit_columns_on_grid_load=True
+)
 
-for i, keyword in enumerate(filtered_keywords):
-    if st.button(keyword, key=f"kwbtn_{i}_{keyword}"):
+selected = grid_response['selected_rows']
+if selected:
+    keyword = selected[0]['query']
+    if st.button(f"Add '{keyword}' to next Force Key"):
         fill_next_force_key(keyword)
-        st.experimental_rerun()  # Refresh to show updated force keys
+        st.experimental_rerun()
