@@ -59,15 +59,17 @@ if uploaded_file:
         fit_columns_on_grid_load=True
     )
 
-    # --- Clickable Top 30 Keywords Section with Search ---
-    st.subheader("Click a keyword below to fill the next available force key (Top 30 by Avg Revenue and Avg RPC):")
+    # --- Clickable Top 30 High Performing Keywords Section with Search ---
+    st.subheader("Click a keyword below to fill the next available force key (Top 30 High Performing Keywords):")
 
-    # Get top 30 by avg_revenue and avg_rpc
-    top_avg_revenue = metrics_df.sort_values("avg_revenue", ascending=False).head(30)
-    top_avg_rpc = metrics_df.sort_values("avg_rpc", ascending=False).head(30)
+    # Calculate a performance score (sum of ranks for avg_revenue and avg_rpc)
+    metrics_df['performance_score'] = (
+        metrics_df['avg_revenue'].rank(ascending=False, method='min') +
+        metrics_df['avg_rpc'].rank(ascending=False, method='min')
+    )
 
-    # Combine and drop duplicates
-    top_keywords = pd.concat([top_avg_revenue, top_avg_rpc]).drop_duplicates(subset="query")
+    # Get top 30 by combined performance score (lower is better)
+    top_keywords = metrics_df.sort_values('performance_score').head(30)
 
     # --- Add a search filter ---
     search_term = st.text_input("Search top keywords...").lower()
