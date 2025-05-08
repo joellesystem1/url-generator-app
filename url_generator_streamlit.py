@@ -233,3 +233,8 @@ if selected:
     if st.button(f"Add '{keyword}' to next Force Key"):
         fill_next_force_key(keyword)
         st.experimental_rerun()
+st.write("### Force Keys")
+cols = st.columns(6)
+for i, key in enumerate(['A', 'B', 'C', 'D', 'E', 'F']):
+    with cols[i]:
+        st.text_input(f"Force Key {key}", value=st.session_state['force_keys'][i], key=f'forceKey{key}')
