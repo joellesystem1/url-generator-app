@@ -44,7 +44,7 @@ if uploaded_file:
     metrics_df = df[[col for col in expected_cols if col in df.columns]].copy()
     st.success(f"File uploaded! {metrics_df.shape[0]} rows loaded.")
 
-    # --- Interactive Keyword Picker Table (AgGrid) ---
+    # --- Interactive Keyword Metrics Table (AgGrid) ---
     st.subheader("Keyword Metrics Table (search/filter above the table!)")
     gb = GridOptionsBuilder.from_dataframe(metrics_df)
     gb.configure_selection('single', use_checkbox=True)  # single row selection with checkbox
@@ -59,24 +59,28 @@ if uploaded_file:
         fit_columns_on_grid_load=True
     )
 
-    # --- Clickable Top 30 Keywords Section ---
-    st.subheader("Click a keyword below to fill the next available force key (Top 30 by Revenue, Clicks, and RPC):")
+    # --- Clickable Top 30 Keywords Section with Search ---
+    st.subheader("Click a keyword below to fill the next available force key (Top 30 by Avg Revenue and Avg RPC):")
 
-    # Get top 30 by each metric
-    top_revenue = metrics_df.sort_values("total_revenue", ascending=False).head(30)
-    top_clicks = metrics_df.sort_values("total_clicks", ascending=False).head(30)
-    top_rpc = metrics_df.sort_values("avg_rpc", ascending=False).head(30)
+    # Get top 30 by avg_revenue and avg_rpc
+    top_avg_revenue = metrics_df.sort_values("avg_revenue", ascending=False).head(30)
+    top_avg_rpc = metrics_df.sort_values("avg_rpc", ascending=False).head(30)
 
     # Combine and drop duplicates
-    top_keywords = pd.concat([top_revenue, top_clicks, top_rpc]).drop_duplicates(subset="query")
+    top_keywords = pd.concat([top_avg_revenue, top_avg_rpc]).drop_duplicates(subset="query")
 
-    # Display as clickable buttons with metrics
-    for idx, row in top_keywords.iterrows():
+    # --- Add a search filter ---
+    search_term = st.text_input("Search top keywords...").lower()
+    if search_term:
+        filtered_keywords = top_keywords[top_keywords['query'].str.lower().str.contains(search_term)]
+    else:
+        filtered_keywords = top_keywords
+
+    # Display as clickable buttons with only Avg Revenue and Avg RPC
+    for idx, row in filtered_keywords.iterrows():
         st.markdown(
             f"**Avg Revenue:** ${row['avg_revenue']:.2f} &nbsp; | &nbsp; "
-            f"**Total Revenue:** ${row['total_revenue']:.2f} &nbsp; | &nbsp; "
-            f"**Avg RPC:** ${row['avg_rpc']:.2f} &nbsp; | &nbsp; "
-            f"**Total Clicks:** {int(row['total_clicks'])}"
+            f"**Avg RPC:** ${row['avg_rpc']:.2f}"
         )
         if st.button(row['query'], key=f"kwbtn_{idx}_{row['query']}"):
             fill_next_force_key(row['query'])
