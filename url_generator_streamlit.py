@@ -60,7 +60,7 @@ if uploaded_file:
     )
 
     # --- Clickable Top 30 High Performing Keywords Section with Search ---
-    st.subheader("Click a keyword below to fill the next available force key (Top 30 High Performing Keywords):")
+    st.subheader("Click a keyword below to fill the next available force key (Top 30 High Performing Keywords by Avg Revenue and Avg RPC):")
 
     # Calculate a performance score (sum of ranks for avg_revenue and avg_rpc)
     metrics_df['performance_score'] = (
