@@ -207,3 +207,21 @@ if uploaded_file:
     st.write(f"**Average RPC:** ${avg_rpc_val:,.2f}")
 else:
     st.info("Upload an Excel file to get started.")
+# --- Keyword Search & Click-to-Add Section ---
+
+# Example: Replace this with your real keyword list or load from file
+all_keywords = [
+    "Bathroom Grants", "Smallest Camper Van with Bathroom", "Find Bathroom Remodel Paid by Grants",
+    "Cheap Dental Implants", "Best Home Insurance", "Affordable Car Insurance"
+]
+
+search_term = st.text_input("Search keywords to add to Force Keys...")
+
+filtered_keywords = [k for k in all_keywords if search_term.lower() in k.lower()]
+
+st.write("Click a keyword to add it to the next available Force Key:")
+
+for keyword in filtered_keywords:
+    if st.button(keyword, key=f"kwbtn_{keyword}"):
+        fill_next_force_key(keyword)
+        st.experimental_rerun()  # Refresh to show updated force keys
