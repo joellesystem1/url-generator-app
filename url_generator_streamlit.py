@@ -225,3 +225,23 @@ for i, keyword in enumerate(filtered_keywords):
     if st.button(keyword, key=f"kwbtn_{i}_{keyword}"):
         fill_next_force_key(keyword)
         st.experimental_rerun()  # Refresh to show updated force keys
+# --- Interactive Keyword Picker Table (AgGrid) ---
+gb = GridOptionsBuilder.from_dataframe(metrics_df)
+gb.configure_selection('single', use_checkbox=True)  # single row selection with checkbox
+grid_options = gb.build()
+
+grid_response = AgGrid(
+    metrics_df,
+    gridOptions=grid_options,
+    update_mode='SELECTION_CHANGED',
+    height=400,
+    width='100%',
+    fit_columns_on_grid_load=True
+)
+
+selected = grid_response['selected_rows']
+if selected:
+    keyword = selected[0]['query']
+    if st.button(f"Add '{keyword}' to next Force Key"):
+        fill_next_force_key(keyword)
+        st.experimental_rerun()
