@@ -225,3 +225,10 @@ for keyword in filtered_keywords:
     if st.button(keyword, key=f"kwbtn_{keyword}"):
         fill_next_force_key(keyword)
         st.experimental_rerun()  # Refresh to show updated force keys
+        # --- Clickable Keyword List to Fill Force Keys ---
+
+# Let's assume 'filtered_keywords' is your list of keywords to display
+for keyword in filtered_keywords:
+    if st.button(keyword, key=f"kwbtn_{keyword}"):
+        fill_next_force_key(keyword)
+        st.experimental_rerun()  # Refresh to show updated force keys
