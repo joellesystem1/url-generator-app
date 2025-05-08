@@ -45,13 +45,12 @@ if uploaded_file:
     st.success(f"File uploaded! {metrics_df.shape[0]} rows loaded.")
 
     # --- Interactive Keyword Picker Table (AgGrid) ---
-    st.subheader("Pick a keyword to add to Force Keys (search/filter above the table!)")
-
+    st.subheader("Keyword Metrics Table (search/filter above the table!)")
     gb = GridOptionsBuilder.from_dataframe(metrics_df)
     gb.configure_selection('single', use_checkbox=True)  # single row selection with checkbox
     grid_options = gb.build()
 
-    grid_response = AgGrid(
+    AgGrid(
         metrics_df,
         gridOptions=grid_options,
         update_mode='SELECTION_CHANGED',
@@ -60,11 +59,27 @@ if uploaded_file:
         fit_columns_on_grid_load=True
     )
 
-    selected = grid_response['selected_rows']
-    if selected:
-        keyword = selected[0]['query']
-        if st.button(f"Add '{keyword}' to next Force Key"):
-            fill_next_force_key(keyword)
+    # --- Clickable Top 30 Keywords Section ---
+    st.subheader("Click a keyword below to fill the next available force key (Top 30 by Revenue, Clicks, and RPC):")
+
+    # Get top 30 by each metric
+    top_revenue = metrics_df.sort_values("total_revenue", ascending=False).head(30)
+    top_clicks = metrics_df.sort_values("total_clicks", ascending=False).head(30)
+    top_rpc = metrics_df.sort_values("avg_rpc", ascending=False).head(30)
+
+    # Combine and drop duplicates
+    top_keywords = pd.concat([top_revenue, top_clicks, top_rpc]).drop_duplicates(subset="query")
+
+    # Display as clickable buttons with metrics
+    for idx, row in top_keywords.iterrows():
+        st.markdown(
+            f"**Avg Revenue:** ${row['avg_revenue']:.2f} &nbsp; | &nbsp; "
+            f"**Total Revenue:** ${row['total_revenue']:.2f} &nbsp; | &nbsp; "
+            f"**Avg RPC:** ${row['avg_rpc']:.2f} &nbsp; | &nbsp; "
+            f"**Total Clicks:** {int(row['total_clicks'])}"
+        )
+        if st.button(row['query'], key=f"kwbtn_{idx}_{row['query']}"):
+            fill_next_force_key(row['query'])
             st.experimental_rerun()
 
     st.write("### Force Keys")
