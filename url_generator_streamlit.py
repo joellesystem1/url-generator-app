@@ -109,3 +109,53 @@ colA, colB, colC = st.columns(3)
 with colA:
     if st.button("Generate System1 URL"):
         sys1_url = build
+        # --- Keyword Metrics Dashboard ---
+st.header("Keyword Metrics Dashboard")
+
+uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx", "xls"])
+
+if uploaded_file:
+    try:
+        df = pd.read_excel(uploaded_file)
+        st.success(f"File uploaded! {df.shape[0]} rows loaded.")
+        # Expecting columns: 'query', 'avg_revenue', 'avg_rpc'
+        df.columns = [c.lower().strip() for c in df.columns]
+        if 'query' not in df.columns or 'avg_revenue' not in df.columns or 'avg_rpc' not in df.columns:
+            st.error("Excel file must have columns: 'query', 'avg_revenue', 'avg_rpc'")
+        else:
+            st.subheader("Search & Click to Fill Force Keys")
+            search_term = st.text_input("Search keywords...", "")
+            filtered_df = df[df['query'].str.lower().str.contains(search_term.lower())]
+            st.dataframe(filtered_df, use_container_width=True)
+            st.write("**Click a keyword below to fill the next available force key:**")
+            max_buttons = 50
+            for idx, row in filtered_df.head(max_buttons).iterrows():
+                st.markdown(
+                    f"<div style='font-weight:bold; font-size:1.1em;'>"
+                    f"Avg Revenue: ${row['avg_revenue']} &nbsp; | &nbsp; "
+                    f"Avg RPC: ${row['avg_rpc']}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                if st.button(row['query'], key=f"kwbtn_{idx}"):
+                    fill_next_force_key(row['query'])
+                    st.rerun()
+            if len(filtered_df) > max_buttons:
+                st.info(f"Showing only the first {max_buttons} keywords. Use the search box to narrow down.")
+            st.write("**Current Force Keys:**")
+            for i, val in enumerate(st.session_state['force_keys']):
+                st.write(f"Force Key {chr(65+i)}: {val}")
+            # Show AgGrid table for metrics
+            gb = GridOptionsBuilder.from_dataframe(df)
+            gb.configure_selection('single', use_checkbox=True)
+            grid_options = gb.build()
+            AgGrid(
+                df,
+                gridOptions=grid_options,
+                update_mode='SELECTION_CHANGED',
+                height=400,
+                width='100%',
+                fit_columns_on_grid_load=True
+            )
+    except Exception as e:
+        st.error(f"Error processing file: {e}")
