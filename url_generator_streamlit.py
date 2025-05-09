@@ -81,4 +81,31 @@ def build_fb_url(live_url, headline, segment, force_keys):
     params.append('s1padid={ad.id}')
     params.append('s1particle=Cheap+Dental+Implants')
     params.append('s1pcid={campaign.id}')
-    params.append('fbid={1234567890
+    params.append('fbid={1234567890}')
+    params.append('fbland={PageView}')
+    params.append('fbserp={Add+To+Wishlist}')
+    params.append('fbclick={Purchase}')
+    params.append('fbclid={click_id}')
+    if live_url:
+        return f"{live_url}?{'&'.join(params)}"
+    return ""
+
+def build_leadgen_url(live_url, headline, segment, force_keys):
+    params = []
+    for i, key in enumerate(force_keys):
+        if key.strip():
+            params.append(f"forceKey{chr(65+i)}={key.strip().replace(' ', '+')}")
+    seg = segment.strip() or 'rsoc.dp.topictracking.001'
+    params.append(f"segment={seg}")
+    params.append(f"headline={headline.strip().replace(' ', '+') if headline.strip() else 'Need+dental+implants'}")
+    params.append('s1paid={account.id}')
+    params.append('s1particle=Cheap+Dental+Implants')
+    params.append('s1pcid={campaign.id}')
+    if live_url:
+        return f"{live_url}?{'&'.join(params)}"
+    return ""
+
+colA, colB, colC = st.columns(3)
+with colA:
+    if st.button("Generate System1 URL"):
+        sys1_url = build
