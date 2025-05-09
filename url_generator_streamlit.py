@@ -5,6 +5,8 @@ import urllib.parse
 from st_aggrid import AgGrid, GridOptionsBuilder
 
 st.set_page_config(page_title="System1 URL Generator & Keyword Dashboard", layout="wide")
+
+# Now you can use st.title, st.header, etc.
 st.title("System1 URL Generator & Keyword Dashboard")
 
 # --- Session State for Force Keys ---
