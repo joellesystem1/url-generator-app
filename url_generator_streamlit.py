@@ -105,11 +105,33 @@ def build_leadgen_url(live_url, headline, segment, force_keys):
         return f"{live_url}?{'&'.join(params)}"
     return ""
 
+# --- URL Generator Buttons ---
 colA, colB, colC = st.columns(3)
 with colA:
     if st.button("Generate System1 URL"):
-        sys1_url = build
-        # --- Keyword Metrics Dashboard ---
+        sys1_url = build_system1_url(live_url, headline, segment, force_keys)
+        st.session_state['sys1_url'] = sys1_url
+    if 'sys1_url' in st.session_state and st.session_state['sys1_url']:
+        st.success("System1 URL:")
+        st.code(st.session_state['sys1_url'], language="text")
+with colB:
+    if st.button("Generate Facebook URL"):
+        fb_url = build_fb_url(live_url, headline, segment, force_keys)
+        st.session_state['fb_url'] = fb_url
+    if 'fb_url' in st.session_state and st.session_state['fb_url']:
+        st.success("Facebook URL:")
+        st.code(st.session_state['fb_url'], language="text")
+with colC:
+    if st.button("Generate Leadgen URL"):
+        leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
+        st.session_state['leadgen_url'] = leadgen_url
+    if 'leadgen_url' in st.session_state and st.session_state['leadgen_url']:
+        st.success("Leadgen URL:")
+        st.code(st.session_state['leadgen_url'], language="text")
+
+st.markdown("---")
+
+# --- Keyword Metrics Dashboard ---
 st.header("Keyword Metrics Dashboard")
 
 uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx", "xls"])
