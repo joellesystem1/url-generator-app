@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import urllib.parse
 
 st.set_page_config(page_title="System1 URL Generator & Keyword Dashboard", layout="wide")
@@ -87,70 +88,4 @@ def build_fb_url(live_url, headline, segment, force_keys):
     if segment.strip():
         params.append(f"segment={segment.strip().replace(' ', '+')}")
     if headline.strip():
-        params.append(f"headline={headline.strip().replace(' ', '+')}")
-    # Tracking params
-    params.append('s1paid={account.id}')
-    params.append('s1placement={placement}')
-    params.append('s1padid={ad.id}')
-    params.append('s1particle=Cheap+Dental+Implants')
-    params.append('s1pcid={campaign.id}')
-    # Facebook params
-    params.append('fbid={1234567890}')
-    params.append('fbland={PageView}')
-    params.append('fbserp={Add+To+Wishlist}')
-    params.append('fbclick={Purchase}')
-    params.append('fbclid={click_id}')
-    if live_url:
-        return f"{live_url}?{'&'.join(params)}"
-    return ""
-
-def build_leadgen_url(live_url, headline, segment, force_keys):
-    params = []
-    for i, key in enumerate(force_keys):
-        if key.strip():
-            params.append(f"forceKey{chr(65+i)}={key.strip().replace(' ', '+')}")
-    seg = segment.strip() or 'rsoc.dp.topictracking.001'
-    params.append(f"segment={seg}")
-    params.append(f"headline={headline.strip().replace(' ', '+') if headline.strip() else 'Need+dental+implants'}")
-    params.append('s1paid={account.id}')
-    # Article from headline or URL
-    article = headline
-    if not article and live_url:
-        try:
-            urlPath = live_url.split('/')
-            article = next((p for p in urlPath if 'en-us' in p), '').split('-en-us')[0]
-            article = ' '.join(word.capitalize() for word in article.split('-')) if article else ''
-        except Exception:
-            article = ''
-    params.append(f"s1particle={article.replace(' ', '+') if article else 'Cheap+Dental+Implants'}")
-    params.append('s1pcid={campaign.id}')
-    if live_url:
-        return f"{live_url}?{'&'.join(params)}"
-    return ""
-
-# --- URL Generator Buttons ---
-sys1_url = fb_url = leadgen_url = ""
-colA, colB, colC = st.columns(3)
-with colA:
-    if st.button("Generate System1 URL"):
-        sys1_url = build_system1_url(live_url, headline, segment, force_keys)
-        st.session_state['sys1_url'] = sys1_url
-    if 'sys1_url' in st.session_state and st.session_state['sys1_url']:
-        st.success("System1 URL:")
-        st.code(st.session_state['sys1_url'], language="text")
-with colB:
-    if st.button("Generate Facebook URL"):
-        fb_url = build_fb_url(live_url, headline, segment, force_keys)
-        st.session_state['fb_url'] = fb_url
-    if 'fb_url' in st.session_state and st.session_state['fb_url']:
-        st.success("Facebook URL:")
-        st.code(st.session_state['fb_url'], language="text")
-with colC:
-    if st.button("Generate Leadgen URL"):
-        leadgen_url = build_leadgen_url(live_url, headline, segment, force_keys)
-        st.session_state['leadgen_url'] = leadgen_url
-    if 'leadgen_url' in st.session_state and st.session_state['leadgen_url']:
-        st.success("Leadgen URL:")
-        st.code(st.session_state['leadgen_url'], language="text")
-
-st.markdown("---")
+        params.append(f"headline={headline.strip().replace(' ',
