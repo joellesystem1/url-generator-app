@@ -152,4 +152,39 @@ with colC:
         st.session_state['leadgen_url'] = leadgen_url
     if 'leadgen_url' in st.session_state and st.session_state['leadgen_url']:
         st.success("Leadgen URL:")
-        st.code(st.session_state
+        st.code(st.session_state['leadgen_url'], language="text")
+
+# --- Keyword Metrics Dashboard ---
+st.header("Keyword Metrics Dashboard")
+
+uploaded_file = st.file_uploader("Upload a CSV or Excel file with keyword metrics", type=["csv", "xlsx", "xls"])
+top_n = st.number_input("How many top keywords to show?", min_value=1, max_value=50, value=10)
+
+if uploaded_file:
+    # Read file
+    if uploaded_file.name.endswith('.csv'):
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file, engine='openpyxl')
+    # Find the QUERY column
+    query_col = [col for col in df.columns if 'query' in col.lower()]
+    if not query_col:
+        st.error("No 'QUERY' column found in your file.")
+        st.stop()
+    query_col = query_col[0]
+    # Find all NET_REVENUE columns
+    net_revenue_cols = [col for col in df.columns if 'net_revenue' in col.lower()]
+    if not net_revenue_cols:
+        st.error("No 'NET_REVENUE' columns found in your file.")
+        st.stop()
+    # Clean and sum net revenue columns
+    df['total_net_revenue'] = df[net_revenue_cols].replace('[\\$,]', '', regex=True).apply(pd.to_numeric, errors='coerce').sum(axis=1)
+    # Remove empty/invalid queries
+    df = df[df[query_col].notnull() & (df[query_col].astype(str).str.strip() != "")]
+    # Sort and show top N
+    top_keywords = df[[query_col, 'total_net_revenue']].sort_values('total_net_revenue', ascending=False).head(top_n)
+    st.dataframe(top_keywords.rename(columns={query_col: "Keyword", "total_net_revenue": "Total Net Revenue"}))
+else:
+    st.info("Upload a CSV or Excel file to see top performing keywords.")
+
+st.markdown("---")
