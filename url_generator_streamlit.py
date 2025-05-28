@@ -1,8 +1,5 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import urllib.parse
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 st.set_page_config(page_title="System1 URL Generator & Keyword Dashboard", layout="wide")
 st.title("System1 URL Generator & Keyword Dashboard")
